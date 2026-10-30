@@ -213,7 +213,7 @@ const edit = (name, args) => ({ name, arguments: args, agent: null });
 
 test('a write with Portuguese prose is blocked', async () => {
   const h = boot();
-  const post = h.handlers.get('tools/post-execute');
+  const post = h.handlers.get('tools/pre-execute');
   const decision = await post(
     {
       ...edit('write', {
@@ -222,17 +222,17 @@ test('a write with Portuguese prose is blocked', async () => {
       }),
       agent: h.agents[0],
     },
-    {},
     allow,
   );
-  assert.equal(decision.kind, 'block');
-  assert.match(decision.feedback[0].text, /is in Portuguese/);
-  assert.match(decision.feedback[0].text, /en-US/);
+  assert.equal(decision.kind, 'deny');
+  assert.match(decision.reason, /Portuguese prose/);
+  assert.match(decision.reason, /en-US/);
+  assert.match(decision.reason, /Nothing was written/);
 });
 
 test('a write already in English passes', async () => {
   const h = boot();
-  const decision = await h.handlers.get('tools/post-execute')(
+  const decision = await h.handlers.get('tools/pre-execute')(
     {
       ...edit('write', {
         file_path: 'src/a.js',
@@ -240,7 +240,6 @@ test('a write already in English passes', async () => {
       }),
       agent: h.agents[0],
     },
-    {},
     allow,
   );
   assert.equal(decision.kind, 'allow');
@@ -249,12 +248,11 @@ test('a write already in English passes', async () => {
 test('localization resources are exempt', async () => {
   const h = boot();
   for (const path of ['locales/pt-BR.json', 'src/i18n/messages.yaml', 'app/messages.po']) {
-    const decision = await h.handlers.get('tools/post-execute')(
+    const decision = await h.handlers.get('tools/pre-execute')(
       {
         ...edit('write', { file_path: path, content: '// calcula o total da compra e devolve o valor final' }),
         agent: h.agents[0],
       },
-      {},
       allow,
     );
     assert.equal(decision.kind, 'allow', path);
@@ -263,9 +261,8 @@ test('localization resources are exempt', async () => {
 
 test('a write with too little prose passes', async () => {
   const h = boot();
-  const decision = await h.handlers.get('tools/post-execute')(
+  const decision = await h.handlers.get('tools/pre-execute')(
     { ...edit('write', { file_path: 'src/a.js', content: '// total' }), agent: h.agents[0] },
-    {},
     allow,
   );
   assert.equal(decision.kind, 'allow');
@@ -275,7 +272,7 @@ test('the write guard is inert when there is no artifact language', async () => 
   const h = boot();
   await h.commands.get('lang').handler({ rawInput: 'artifacts inherit' });
   await h.commands.get('lang').handler({ rawInput: 'chat auto' });
-  const decision = await h.handlers.get('tools/post-execute')(
+  const decision = await h.handlers.get('tools/pre-execute')(
     {
       ...edit('write', {
         file_path: 'src/a.js',
@@ -283,7 +280,6 @@ test('the write guard is inert when there is no artifact language', async () => 
       }),
       agent: h.agents[0],
     },
-    {},
     allow,
   );
   assert.equal(decision.kind, 'allow');
@@ -291,7 +287,7 @@ test('the write guard is inert when there is no artifact language', async () => 
 
 test('the write guard blocks at most twice per turn', async () => {
   const h = boot();
-  const post = h.handlers.get('tools/post-execute');
+  const post = h.handlers.get('tools/pre-execute');
   const exec = {
     ...edit('write', {
       file_path: 'src/a.js',
@@ -303,13 +299,13 @@ test('the write guard blocks at most twice per turn', async () => {
     h.handlers.get('agent/turn-stopping')({ agent: h.agents[0], turn: 1, signal: new AbortController().signal });
   await stop(); // the turn is under way, so the budget is armed
   const decisions = [];
-  for (let index = 0; index < 3; index += 1) decisions.push((await post(exec, {}, allow)).kind);
-  assert.deepEqual(decisions, ['block', 'block', 'allow']);
+  for (let index = 0; index < 3; index += 1) decisions.push((await post(exec, allow)).kind);
+  assert.deepEqual(decisions, ['deny', 'deny', 'allow']);
 });
 
 test('the budget resets on the next turn', async () => {
   const h = boot();
-  const post = h.handlers.get('tools/post-execute');
+  const post = h.handlers.get('tools/pre-execute');
   const exec = {
     ...edit('write', {
       file_path: 'src/a.js',
@@ -320,11 +316,11 @@ test('the budget resets on the next turn', async () => {
   const stop = (turn) =>
     h.handlers.get('agent/turn-stopping')({ agent: h.agents[0], turn, signal: new AbortController().signal });
   await stop(1);
-  await post(exec, {}, allow);
-  await post(exec, {}, allow);
-  assert.equal((await post(exec, {}, allow)).kind, 'allow');
+  await post(exec, allow);
+  await post(exec, allow);
+  assert.equal((await post(exec, allow)).kind, 'allow');
   await stop(2);
-  assert.equal((await post(exec, {}, allow)).kind, 'block');
+  assert.equal((await post(exec, allow)).kind, 'deny');
 });
 
 test('a compaction request gets the artifact language', async () => {

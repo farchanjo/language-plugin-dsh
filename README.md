@@ -91,7 +91,7 @@ An explicit request for another language in one message wins for that turn only.
 | Layer | Surface | Effect |
 |---|---|---|
 | Reminder | `system-prompt/assemble` | the policy is restated in the runtime-context snapshot, which sits at the tail of the request and replaces itself every step |
-| Write guard | `tools/post-execute` | after `write`/`edit`, the comments and documentation are checked; a wrong language turns the write into an error with a retry instruction |
+| Write guard | `tools/pre-execute` | before `write`/`edit` runs, the comments and documentation are checked; a wrong language denies the call with a retry instruction, so nothing bad lands on disk |
 | Auxiliary calls | `llm/stream` | the compaction summary and the session title get the artifact and chat language respectively |
 
 The write guard judges only human prose: documentation bodies and comment lines.
@@ -108,8 +108,8 @@ is corrected at most twice.
   and a turn gets at most two corrections.
 - The write guard shares that detector. A language outside those six is never
   recognized, so an artifact target like `ja-JP` produces no blocks.
-- The guard reacts after the write already landed. For `edit` the retry needs a
-  fresh read, because the old text is gone.
+- The guard judges the arguments, so it cannot know whether the tool would have
+  succeeded. A retry after a deny is always safe: nothing was written.
 - Existing files keep their wording, so converting a whole repository needs an
   explicit instruction.
 
