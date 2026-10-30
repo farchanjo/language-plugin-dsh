@@ -183,7 +183,7 @@ test('plain text closes the picker and reaches the model', async () => {
   assert.equal(again.kind, 'enter');
 });
 
-test('the reminder rides the tail snapshot for the root only', async () => {
+test('the root gets the full reminder and a child gets the artifact one', async () => {
   const h = boot();
   await h.commands.get('lang').handler({ rawInput: 'chat pt-BR' });
   const assemble = h.handlers.get('system-prompt/assemble');
@@ -195,7 +195,17 @@ test('the reminder rides the tail snapshot for the root only', async () => {
 
   const child = { sections: [], contexts: [], tools: [], variables: {} };
   await assemble(child, { scope: { id: 'child' } }, async () => child);
-  assert.equal(child.contexts.length, 0);
+  assert.equal(child.contexts.length, 1);
+  assert.match(child.contexts[0].text, /stays in en-US/);
+  assert.doesNotMatch(child.contexts[0].text, /Reply prose/); // chat is the root's job
+});
+
+test('a child gets no reminder when the artifact axis is off', async () => {
+  const h = boot();
+  await h.commands.get('lang').handler({ rawInput: 'artifacts off' });
+  const assembly = { sections: [], contexts: [], tools: [], variables: {} };
+  await h.handlers.get('system-prompt/assemble')(assembly, { scope: { id: 'child' } }, async () => assembly);
+  assert.equal(assembly.contexts.length, 0);
 });
 
 test('nothing rides the snapshot when both axes are off', async () => {
@@ -283,6 +293,40 @@ test('the write guard is inert when there is no artifact language', async () => 
     allow,
   );
   assert.equal(decision.kind, 'allow');
+});
+
+test('a delegated child is guarded too', async () => {
+  const h = boot();
+  const child = { id: 'child', steer: () => {} };
+  const decision = await h.handlers.get('tools/pre-execute')(
+    {
+      ...edit('write', {
+        file_path: 'src/b.js',
+        content: '// Isso calcula o total da compra e devolve o valor final ao chamador.',
+      }),
+      agent: child,
+    },
+    allow,
+  );
+  assert.equal(decision.kind, 'deny');
+});
+
+test('the write budget is per agent', async () => {
+  const h = boot();
+  const child = { id: 'child', steer: () => {} };
+  const post = h.handlers.get('tools/pre-execute');
+  const body = {
+    file_path: 'src/a.js',
+    content: '// Isso calcula o total da compra e devolve o valor final ao chamador.',
+  };
+  const root = { ...edit('write', body), agent: h.agents[0] };
+  const kid = { ...edit('write', body), agent: child };
+
+  await h.handlers.get('agent/turn-stopping')({ agent: h.agents[0], turn: 1, signal: new AbortController().signal });
+  await h.handlers.get('agent/turn-stopping')({ agent: child, turn: 1, signal: new AbortController().signal });
+  for (let index = 0; index < 3; index += 1) await post(root, allow);
+  assert.equal((await post(root, allow)).kind, 'allow'); // the root is spent
+  assert.equal((await post(kid, allow)).kind, 'deny'); // the child is not
 });
 
 test('the write guard blocks at most twice per turn', async () => {

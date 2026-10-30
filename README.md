@@ -18,8 +18,9 @@ sent to the model).
 
 - **Plugin-only.** No dsh core change, no patch, no fork. Plain Cordis services.
 - **Scoped.** The chat rule belongs to the root agent, so a delegated child does
-  not inherit the user-facing voice. The artifact rule is global: a subagent
-  still writes files in the artifact language.
+  not inherit the user-facing voice. The artifact rule is global: a child gets
+  the artifact section, an artifact-only tail reminder, and the same write
+  guard, with its own budget.
 - **Zero dependencies.** Plain ESM, no build step, no network call.
 - **Offline guard.** Optional strict mode detects an ignored chat language with a
   local stopword heuristic and steers one correction. No model call.
@@ -96,8 +97,8 @@ An explicit request for another language in one message wins for that turn only.
 
 The write guard judges only human prose: documentation bodies and comment lines.
 Identifiers, strings, and data files are ignored, and so are localization
-resources. A file with fewer than eight words of prose is left alone, and a turn
-is corrected at most twice.
+resources. A file with fewer than eight words of prose is left alone. Every agent gets its
+own budget: at most two denials and two corrections per turn.
 
 ## Limits
 
