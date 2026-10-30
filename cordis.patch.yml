@@ -1,0 +1,12 @@
+# Bundle patch: insert the plugin as a profile row.
+#
+# The defaults here are only seeds; the state file
+# (~/.config/language-plugin-dsh/config.json) is the runtime truth and
+# `/lang` writes it. Every key is optional.
+- insert:
+    - id: language-plugin-dsh
+      name: 'language-plugin-dsh'
+      config:
+        chat: inherit
+        artifacts: en-US
+        strict: false
