@@ -93,7 +93,13 @@ An explicit request for another language in one message wins for that turn only.
 |---|---|---|
 | Reminder | `system-prompt/assemble` | the policy is restated in the runtime-context snapshot, which sits at the tail of the request and replaces itself every step |
 | Write guard | `tools/pre-execute` | before `write`/`edit` runs, the comments and documentation are checked; a wrong language denies the call with a retry instruction, so nothing bad lands on disk |
-| Auxiliary calls | `llm/stream` | the compaction summary and the session title get the artifact and chat language respectively |
+| Summarizer | own `compaction` engine | subclasses the stock engine, so every inherited step stays and only the directive gains the artifact language |
+| Title | `llm/stream` (`purpose: 'session-title'`) | the title follows the chat language |
+
+The summarizer row is the stock engine disabled and this plugin's subclass
+inserted in its place. The composition stays intact: jev-compaction keeps its
+own row and prunes before the summary, and every inherited behaviour — range
+selection, replay prefix, envelope, usage accounting — is untouched.
 
 The write guard judges only human prose: documentation bodies and comment lines.
 Identifiers, strings, and data files are ignored, and so are localization
@@ -111,6 +117,8 @@ own budget: at most two denials and two corrections per turn.
   recognized, so an artifact target like `ja-JP` produces no blocks.
 - The guard judges the arguments, so it cannot know whether the tool would have
   succeeded. A retry after a deny is always safe: nothing was written.
+- The engine subclasses `@deepseek-ai/dsh-compaction-basic` and needs it
+  installed in the profile. A host upgrade can move that class.
 - Existing files keep their wording, so converting a whole repository needs an
   explicit instruction.
 
