@@ -27,22 +27,29 @@ test('normalize keeps valid values and drops invalid ones', () => {
     chat: 'en-US',
     artifacts: 'pt-BR',
     strict: true,
+    decide: 'auto',
   });
   assert.deepEqual(normalize({ chat: 'nope', artifacts: 'nope', strict: 'yes' }), {
     chat: 'inherit',
     artifacts: 'en-US',
     strict: false,
+    decide: 'auto',
   });
 });
 
 test('artifacts default to en-US', () => {
   assert.equal(DEFAULTS.artifacts, 'en-US');
-  assert.deepEqual(normalize({}), { chat: 'inherit', artifacts: 'en-US', strict: false });
+  assert.deepEqual(normalize({}), { chat: 'inherit', artifacts: 'en-US', strict: false, decide: 'auto' });
 });
 
 test('chat defaults to inherit', () => {
   assert.equal(DEFAULTS.chat, 'inherit');
-  assert.deepEqual(normalize({ chat: 'inherit' }), { chat: 'inherit', artifacts: 'en-US', strict: false });
+  assert.deepEqual(normalize({ chat: 'inherit' }), {
+    chat: 'inherit',
+    artifacts: 'en-US',
+    strict: false,
+    decide: 'auto',
+  });
 });
 
 test('chat still takes auto as an alias', () => {

@@ -8,6 +8,7 @@ Two independent axes, both enforced from a system-prompt section:
 |---|---|---|
 | `chat` | `inherit` (default), `auto`, `off`, a BCP-47 tag | the prose the agent replies with |
 | `artifacts` | `en-US` (default), `inherit`, `off`, a BCP-47 tag | everything written into a file or to a forge |
+| `decide` | `auto` (default), `stopwords`, `jev`, `off` | how the guards judge a language |
 
 `chat` defaults to `inherit`: the reply follows the language the user writes.
 `auto` is an accepted alias for it. `artifacts` is pinned to `en-US` by
@@ -54,6 +55,7 @@ and no storage are used.
 /lang artifacts inherit    # follow the chat axis instead
 /lang artifacts off        # no artifact rule
 /lang strict on            # correct an ignored chat language
+/lang decide auto          # how the guards judge (auto, stopwords, jev, off)
 /lang reset                # back to inherit / en-US / off
 ```
 
@@ -76,6 +78,26 @@ rejected.
 State lives in `~/.config/language-plugin-dsh/config.json` (0700 directory,
 0600 file, atomic write). The file is the runtime truth; the row config in
 `cordis.patch.yml` only seeds a fresh install.
+
+## Deciders
+
+The guards need to know which language a text is in.
+
+| Mode | Behaviour |
+|---|---|
+| `auto` | offline for the six languages the local detector knows, the decision model for anything else |
+| `stopwords` | always offline |
+| `jev` | always the model, with the offline detector as fallback |
+| `off` | never judge; the guards stay inert |
+
+The model is TypeSafe System One, asked as a `noul` plus a `choice` with
+confidence. A sure answer decides; an unsure one falls back to the offline
+detector; a failure of any kind falls back too. Nothing ever blocks a turn on a
+network problem. Answers are cached by content hash, and prose sent upstream is
+capped at 4000 characters.
+
+The key comes from `TYPESAFE_AI_FABRICIO_KEY` (or `TYPESAFE_API_KEY`) in the
+environment, then from the credential store.
 
 ## What the section says
 
@@ -113,8 +135,11 @@ own budget: at most two denials and two corrections per turn.
 - The strict detector scores stopword hits for Portuguese, English, Spanish,
   French, German and Italian. An unclear or language-neutral reply is left alone,
   and a turn gets at most two corrections.
-- The write guard shares that detector. A language outside those six is never
-  recognized, so an artifact target like `ja-JP` produces no blocks.
+- The write guard shares that detector. A target outside those six needs
+  `decide: jev` (or `auto`) to be judgeable at all; with the offline detector
+  alone, `ja-JP` produces no blocks.
+- `jev` sends the judged prose to TypeSafe, costs tokens per uncached call, and
+  can add up to 2.5 s before a write.
 - The guard judges the arguments, so it cannot know whether the tool would have
   succeeded. A retry after a deny is always safe: nothing was written.
 - The engine subclasses `@deepseek-ai/dsh-compaction-basic`, declared as a
