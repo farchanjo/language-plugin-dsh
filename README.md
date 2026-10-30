@@ -117,8 +117,14 @@ own budget: at most two denials and two corrections per turn.
   recognized, so an artifact target like `ja-JP` produces no blocks.
 - The guard judges the arguments, so it cannot know whether the tool would have
   succeeded. A retry after a deny is always safe: nothing was written.
-- The engine subclasses `@deepseek-ai/dsh-compaction-basic` and needs it
-  installed in the profile. A host upgrade can move that class.
+- The engine subclasses `@deepseek-ai/dsh-compaction-basic`, declared as a
+  dependency so `dsh plugin add` installs it. A host upgrade can move that
+  class; bump the pin with it.
+- Exactly one engine may claim `compaction`. If a preset or another bundle
+  mounts its own, disable one of the two rows:
+  `/lang` keeps working, only the summary language is lost.
+- Switching jev-compaction to backend mode (its `./backend` entry) also mounts
+  an engine. Keep our row disabled in that case.
 - Existing files keep their wording, so converting a whole repository needs an
   explicit instruction.
 
