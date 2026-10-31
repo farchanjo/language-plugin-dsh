@@ -552,6 +552,28 @@ test('/lang artifacts inherit resolves to the chat language', async () => {
   assert.match(h.text('language-policy:artifacts', {}), /pt-BR/);
 });
 
+test('the command name may arrive in the raw input', async () => {
+  const h = boot();
+  const result = await h.commands.get('lang').handler({ rawInput: '/lang artifacts en-US' });
+  assert.equal(result.kind, 'success');
+  assert.match(h.text('language-policy:artifacts', {}), /fixed: en-US/);
+});
+
+test('a full line works while the picker is open', async () => {
+  const h = boot();
+  await h.commands.get('lang').handler({ rawInput: '' });
+  const result = await h.commands.get('lang').handler({ rawInput: '/lang chat fr-FR' });
+  assert.equal(result.kind, 'success');
+  assert.match(h.text('language-policy:chat', { scope: h.agents[0] }), /fixed: fr-FR/);
+});
+
+test('reset restores the decider too', async () => {
+  const h = boot();
+  await h.commands.get('lang').handler({ rawInput: 'decide jev' });
+  const result = await h.commands.get('lang').handler({ rawInput: 'reset' });
+  assert.match(result.text, /decide: auto/);
+});
+
 test('/lang rejects a non-tag', async () => {
   const h = boot();
   const result = await h.commands.get('lang').handler({ rawInput: 'chat portuguese' });
