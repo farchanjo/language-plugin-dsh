@@ -11,16 +11,10 @@
         artifacts: en-US
         strict: false
 
-# The checkpoint summarizer.
+# The checkpoint summarizer lives inside the plugin, not in a row of its own:
+# the plugin mounts it only when nothing else claims `compaction`, so a preset
+# or a backend-mode jev is detected instead of crashing the boot.
 #
-# The loader cannot rename a row, so the stock engine is disabled and ours is
-# inserted. Ours subclasses it: range selection, replay prefix, envelope and
-# usage accounting are inherited, and only the directive gains the artifact
-# language. Jev-compaction stays mounted on its own row and keeps pruning
-# before this runs.
+# The stock row must still be off, or it races ours into the same service.
 - id: compaction-basic
   disabled: true
-
-- insert:
-    - id: language-compaction
-      name: 'language-plugin-dsh/compaction'

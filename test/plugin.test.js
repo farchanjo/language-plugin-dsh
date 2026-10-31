@@ -11,7 +11,7 @@ const { MENU_LANGUAGES, apply } = await import('../lib/index.js');
 const { label, shortName } = await import('../lib/lang.js');
 
 /** Minimal Cordis context: inject, on, effect, and the services the plugin uses. */
-function harness() {
+function harness({ compaction = false } = {}) {
   const handlers = new Map();
   const sections = new Map();
   const commands = new Map();
@@ -20,6 +20,7 @@ function harness() {
   const effects = [];
   const agents = [{ id: 'root', steer: (message) => steered.push(message) }];
   const requests = [];
+  const plugins = [];
 
   const scope = {
     systemPrompt: {
@@ -44,7 +45,14 @@ function harness() {
     },
   };
 
+  if (compaction) scope.compaction = { mounted: true };
+
   const ctx = {
+    get: (name) => scope[name],
+    plugin: (target) => {
+      plugins.push(target);
+      return { dispose() {} };
+    },
     inject(deps, fn) {
       if (deps.some((dependency) => scope[dependency] === undefined)) return () => {};
       const disposer = fn(scope);
@@ -56,15 +64,16 @@ function harness() {
     },
     effect(fn) {
       effects.push(fn);
+      fn(); // Cordis runs the effect immediately and keeps its disposer
     },
   };
 
-  return { ctx, handlers, sections, commands, badges, steered, effects, agents, requests };
+  return { ctx, handlers, sections, commands, badges, steered, effects, agents, requests, plugins, scope };
 }
 
 /** Build a plugin instance; the caller disposes it through the effect. */
-function boot() {
-  const h = harness();
+function boot(options) {
+  const h = harness(options);
   apply(h.ctx, {});
   // The state file outlives one test, so every boot starts from the defaults.
   h.commands.get('lang').handler({ rawInput: 'reset' });
@@ -653,6 +662,20 @@ test('/lang off silences both sections', async () => {
   await h.commands.get('lang').handler({ rawInput: 'artifacts off' });
   assert.equal(h.text('language-policy:chat', { scope: h.agents[0] }), '');
   assert.equal(h.text('language-policy:artifacts', {}), '');
+});
+
+test('the checkpoint engine is mounted when nothing claims it', async () => {
+  const h = boot();
+  for (let tries = 0; tries < 100 && h.plugins.length === 0; tries += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.equal(h.plugins.length, 1);
+});
+
+test('the checkpoint engine is skipped when another one is mounted', async () => {
+  const h = boot({ compaction: true });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(h.plugins.length, 0);
 });
 
 test('cleanup disposes every registration', () => {

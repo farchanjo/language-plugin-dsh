@@ -118,10 +118,12 @@ An explicit request for another language in one message wins for that turn only.
 | Summarizer | own `compaction` engine | subclasses the stock engine, so every inherited step stays and only the directive gains the artifact language |
 | Title | `llm/stream` (`purpose: 'session-title'`) | the title follows the chat language |
 
-The summarizer row is the stock engine disabled and this plugin's subclass
-inserted in its place. The composition stays intact: jev-compaction keeps its
-own row and prunes before the summary, and every inherited behaviour — range
-selection, replay prefix, envelope, usage accounting — is untouched.
+The summarizer is mounted from inside the plugin, not from a row, and only when
+nothing else claims `compaction`. A preset or a backend-mode jev is therefore
+detected instead of crashing the boot; the checkpoint just keeps the host
+language. The stock row is disabled so it cannot race ours into the service.
+Everything inherited — range selection, replay prefix, envelope, usage
+accounting — is untouched, and jev-compaction keeps pruning before the summary.
 
 The write guard judges only human prose: documentation bodies and comment lines.
 Identifiers, strings, and data files are ignored, and so are localization
@@ -145,11 +147,10 @@ own budget: at most two denials and two corrections per turn.
 - The engine subclasses `@deepseek-ai/dsh-compaction-basic`, declared as a
   dependency so `dsh plugin add` installs it. A host upgrade can move that
   class; bump the pin with it.
-- Exactly one engine may claim `compaction`. If a preset or another bundle
-  mounts its own, disable one of the two rows:
-  `/lang` keeps working, only the summary language is lost.
-- Switching jev-compaction to backend mode (its `./backend` entry) also mounts
-  an engine. Keep our row disabled in that case.
+- Exactly one engine may claim `compaction`. The plugin checks first, so a
+  preset or a backend-mode jev simply wins: nothing crashes, only the summary
+  language is lost. Switch jev-compaction to its `./backend` entry and our
+  engine stands down on the next boot.
 - Existing files keep their wording, so converting a whole repository needs an
   explicit instruction.
 
