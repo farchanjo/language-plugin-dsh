@@ -1,6 +1,6 @@
 {
   "name": "language-plugin-dsh",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Chat language picker with artifacts pinned to en-US: reply in the user language, English code and docs, plugin-only.",
   "keywords": [
     "dsh",
