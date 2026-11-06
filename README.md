@@ -31,18 +31,19 @@ sent to the model).
 
 ## Install
 
-```bash
-git clone https://github.com/farchanjo/language-plugin-dsh.git
-dsh plugin --profile tui add ./language-plugin-dsh   # terminal UI
-dsh plugin --profile web add ./language-plugin-dsh   # web UI
+Every tagged version ships a packed tarball on the
+[Releases](https://github.com/farchanjo/language-plugin-dsh/releases) page:
+
+```sh
+dsh plugin --profile <profile> add \
+  https://github.com/farchanjo/language-plugin-dsh/releases/download/v<version>/language-plugin-dsh-<version>.tgz
 ```
 
-Restart dsh afterwards. Remove with
-`dsh plugin --profile <p> remove language-plugin-dsh`.
+Verify the asset against the `.sha256` published beside it before installing.
+Remove with `dsh plugin --profile <profile> remove language-plugin-dsh`.
 
-The plugin declares the `commands.dsh/v1alpha1#Command` contract and the
-`commands.invoke` permission. No grants file is needed: no mediated capability
-and no storage are used.
+A git clone works too, for development. The release contract — bump, tag,
+assets, checks — lives in [AGENTS.md](AGENTS.md).
 
 ## Usage
 
