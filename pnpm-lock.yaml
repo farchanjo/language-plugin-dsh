@@ -8,16 +8,13 @@ importers:
 
   .:
     dependencies:
-      '@deepseek-ai/cordis':
-        specifier: ^4.0.1
-        version: 4.0.5
+      '@deepseek-ai/dsh-compaction-basic':
+        specifier: 0.2.1-rc.2
+        version: 0.2.1-rc.2(57efb8fd1f5db7f27ffd56d54e55c8d1)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.6.4
         version: 2.6.4
-      '@deepseek-ai/dsh-compaction-basic':
-        specifier: 0.2.1-rc.2
-        version: 0.2.1-rc.2(57efb8fd1f5db7f27ffd56d54e55c8d1)
 
 packages:
 
